@@ -1,34 +1,132 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# About
 
-## Getting Started
+This repo was built to help determine how a value can be computed in Next.js middleware and then read from the final endpoint.
 
-First, run the development server:
+Specifically, we test whether a Next.js middleware rewrite() leads to changes in the "Request" object that Next.js endpoints receive.
 
-```bash
-npm run dev
-# or
-yarn dev
+# How to use
+
+There are four "endpoints" in this repo:
+
+1. /page/node
+2. /page/edge
+3. /api/node
+4. /api/edge
+
+The endpoints run on the runtime indicated in their path, using the Next.js (https://nextjs.org/docs/advanced-features/react-18/switchable-runtime)[switchable runtime].
+
+Page endpoints are configured to print the URL and headers that `getServerSideProps` receives inside `context.req`. The data is wrapped in triple hyphens (e.g. ---) for easy parsing from the command line.
+
+API endpoints are configured to print the URL and headers received through the `request` parameter.
+
+Before endpoints receive a request, Next.js Middleware can be directed to run a mutation. The mutation is applied using "NextResponse.rewrite()"
+
+Mutations are applied to the query string, cookies, or headers. They are not applied to the path, since our goal is to compute a value in middleware and pass it to the requested endpoint. We do not want to change the endpoint.
+
+Mutations are specified using the `mutation` query param. The available values are:
+
+- `set-query-param`
+- `set-cookie`
+- `set-header`
+
+Each mutation also requires `name` and `value` params
+
+# Results
+
+We use cURL to determine the behavior since browsers bloat requests with headers that are not helpful for debugging.
+
+We run the cURL requests against both development and production environment. The production environment is hosted on Vercel.
+
+## Baseline
+
+### /page/node
+
+**Command**
+
+```
+echo "/page/node route\n\n" \
+&& echo "Dev\n\n" \
+&& curl -s "http://localhost:3000/page/node" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
+&& echo "\n\nProd\n\n" \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/node" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
+&& echo "/page/edge route\n\n" \
+&& echo "Dev\n\n" \
+&& curl -s "http://localhost:3000/page/edge" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
+&& echo "\n\nProd\n\n" \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/edge" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
+&& echo "/api/node route\n\n" \
+&& echo "Dev\n\n" \
+&& curl -s "http://localhost:3000/api/node" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
+&& echo "\n\nProd\n\n" \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/node" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
+&& echo "/api/edge route\n\n" \
+&& echo "Dev\n\n" \
+&& curl -s "http://localhost:3000/api/edge" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
+&& echo "\n\nProd\n\n" \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/edge" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));'
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Response**
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+Dev
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+```
+{
+  "headers": {
+    "host": "localhost:3000",
+    "user-agent": "curl/7.79.1",
+    "accept": "*/*"
+  },
+  "url": "/api/node"
+}
+```
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+Prod
 
-## Learn More
+```
+{
+  "headers": {
+    "host": "nextjs-middleware-debugging.vercel.app",
+    "x-real-ip": "205.220.128.102",
+    "x-vercel-proxied-for": "205.220.128.102",
+    "x-vercel-deployment-url": "nextjs-middleware-debugging-1hhjnhuxx-clerk-production.vercel.app",
+    "x-vercel-ip-latitude": "37.751",
+    "x-vercel-forwarded-for": "205.220.128.102",
+    "x-vercel-id": "sfo1::jn9jd-1663429225881-6d3cd2fca629",
+    "x-matched-path": "/api/node",
+    "x-vercel-ip-longitude": "-97.822",
+    "accept": "*/*",
+    "x-vercel-ip-country": "US",
+    "x-forwarded-proto": "https",
+    "x-vercel-proxy-signature": "Bearer 4d305d2d801d2dc25a13ecfdce0738c3ae5a8504557be98de9d1e5c53862aef0",
+    "x-forwarded-for": "205.220.128.102",
+    "user-agent": "curl/7.79.1",
+    "forwarded": "for=205.220.128.102;host=nextjs-middleware-debugging.vercel.app;proto=https;sig=0QmVhcmVyIDRkMzA1ZDJkODAxZDJkYzI1YTEzZWNmZGNlMDczOGMzYWU1YTg1MDQ1NTdiZTk4ZGU5ZDFlNWM1Mzg2MmFlZjA=;exp=1663429525",
+    "x-vercel-ip-timezone": "America/Chicago",
+    "x-vercel-proxy-signature-ts": "1663429525",
+    "x-forwarded-host": "nextjs-middleware-debugging.vercel.app",
+    "connection": "close"
+  },
+  "url": "/api/node"
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+**Result**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### /page/node
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+## Set a query param
 
-## Deploy on Vercel
+## Set a header
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Set a cookie
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+### /page/node
+
+### /page/node
+
+❌✅
+
+```
+
+```
