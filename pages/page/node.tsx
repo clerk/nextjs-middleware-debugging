@@ -1,9 +1,8 @@
-import serialize from "../../serializeRequest";
 export const getServerSideProps = async (context: any) => {
   console.log(context.req);
   return {
     props: {
-      debug: serialize({
+      debug: JSON.stringify({
         headers: context.req.headers,
         url: context.req.url,
       }),

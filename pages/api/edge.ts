@@ -1,10 +1,9 @@
 import type { NextRequest } from "next/server";
-import serialize from "../../serializeRequest";
 
 export default function handler(req: NextRequest) {
   console.log(req);
   return new Response(
-    serialize({
+    JSON.stringify({
       headers: Object.fromEntries(req.headers),
       url: req.url,
     })
