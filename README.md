@@ -21,11 +21,11 @@ API endpoints are configured to print the URL that the handler receives through 
 
 # Results
 
-We run cURL requests against both development and production to determine their behavior. The production environment is hosted on Vercel.
+We ran cURL requests against both development and production to determine their behavior. The production environment is hosted on Vercel.
 
 ## Control
 
-This prints the request URL when endpoints are accessed directly, and middleware returns `NextResponse.next()`.
+This prints the request URL when endpoints are accessed directly and middleware returns `NextResponse.next()`.
 
 For completeness, we include a query string (?foo=bar) in the URL.
 
@@ -80,7 +80,7 @@ Dev request.url:  http://localhost:3000/api/edge?foo=bar
 Prod request.url: https://nextjs-middleware-debugging.vercel.app/api/edge?foo=bar
 ```
 
-With NextResponse.next() endpoints all behave consistently, with one small exception.
+With `NextResponse.next()`, all endpoints behave consistently, with one small exception.
 
 Edge API routes have access to the full URL, while others are missing the origin.
 
@@ -115,7 +115,7 @@ echo "Requesting: /test?rewrite=/page/node?foo=bar\n" \
 && curl -s "https://nextjs-middleware-debugging.vercel.app/test?rewrite=/api/edge?foo=bar"
 ```
 
-**Results**
+### Results
 
 ```
 Requesting: /test?rewrite=/page/node?foo=bar
@@ -145,11 +145,11 @@ _/page/node_
 
 ❌ In dev, `context.req.url` reflects the complete original request URL
 
-✅ In prod, `context.req.url` reflects the original pathname and the rewritten query string
+❌ In prod, `context.req.url` reflects the original pathname and the rewritten query string
 
 _/page/edge_
 
-❌ In dev, `context.req.url` reflects the complete rewritten request URL
+✅ In dev, `context.req.url` reflects the complete rewritten request URL
 
 ❌ In prod, `context.req.url` reflects the original pathname and the rewritten query string
 
