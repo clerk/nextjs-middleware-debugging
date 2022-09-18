@@ -3,11 +3,21 @@ import type { NextRequest } from "next/server";
 
 export default function middleware(req: NextRequest) {
   const query = new URL(req.url).searchParams;
-  const action = query.get("action");
+  const action = query.get("mutation");
 
   // Don't modify unless indicated
   if (!action) {
     return NextResponse.next();
+  }
+
+  if (action === "set-url") {
+    const to = query.get("to");
+    if (to) {
+      const newUrl = new URL(to, req.url);
+      return NextResponse.rewrite(newUrl);
+    } else {
+      throw new Error("must set name and value to set a query param");
+    }
   }
 
   const newUrl = new URL(req.url);
