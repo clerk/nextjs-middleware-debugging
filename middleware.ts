@@ -3,48 +3,12 @@ import type { NextRequest } from "next/server";
 
 export default function middleware(req: NextRequest) {
   const query = new URL(req.url).searchParams;
-  const action = query.get("mutation");
+  const rewrite = query.get("rewrite");
 
-  // Don't modify unless indicated
-  if (!action) {
-    return NextResponse.next();
+  if (rewrite) {
+    const newUrl = new URL(rewrite, req.url);
+    return NextResponse.rewrite(newUrl);
   }
 
-  if (action === "set-url") {
-    const to = query.get("to");
-    if (to) {
-      const newUrl = new URL(to, req.url);
-      return NextResponse.rewrite(newUrl);
-    } else {
-      throw new Error("must set name and value to set a query param");
-    }
-  }
-
-  const newUrl = new URL(req.url);
-
-  if (action === "set-cookie") {
-    const name = query.get("name");
-    const value = query.get("value");
-    if (name && value) {
-      const response = NextResponse.rewrite(newUrl);
-      response.cookies.set(name, value);
-      return NextResponse.rewrite(newUrl);
-    } else {
-      throw new Error("must set name and value to set a cookie");
-    }
-  }
-
-  if (action === "set-header") {
-    const headers = new Headers();
-    const name = query.get("name");
-    const value = query.get("value");
-    if (name && value) {
-      headers.set(name, value);
-      return NextResponse.rewrite(req.url, { headers });
-    } else {
-      throw new Error("must set name and value to add a header");
-    }
-  }
-
-  throw new Error(`Unrecognized action received in middleware: ${action}`);
+  return NextResponse.next();
 }

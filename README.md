@@ -1,6 +1,6 @@
 # About
 
-This repo was built to help determine how calling NextResponse.rewrite() in Next.js impacts the Request object received at the final _endpoint_, which we define as either a React Page or a API Route.
+This repo was built to help determine how calling NextResponse.rewrite() in Next.js impacts the Request object received at the final _endpoint_, which can be either a React Page or a API Route.
 
 We found that there is inconsistency across development and production, and across node and edge runtimes. We detail those inconsistencies below and provide commands to reproduce.
 
@@ -15,27 +15,13 @@ There are four "endpoints" in this repo:
 
 The endpoints run on the runtime indicated in their path, using the Next.js [switchable runtime](https://nextjs.org/docs/advanced-features/react-18/switchable-runtime).
 
-Page endpoints are configured to print the URL and headers that `getServerSideProps` receives inside `context.req`. The data is wrapped in triple hyphens (e.g. ---) for easy parsing from the command line.
+Page endpoints are configured to print the URL that `getServerSideProps` receives inside `context.req`. The URL is wrapped in triple hyphens (e.g. ---) for easy parsing from the command line.
 
-API endpoints are configured to print the URL and headers received through the `request` parameter.
-
-Before endpoints receive a request, Next.js Middleware can be directed to run a mutation. The mutation is applied using "NextResponse.rewrite()"
-
-Mutations are applied to the URL, cookies, or headers.
-
-Pathname mutations are specified with the `rewriteUrl` query param.
-
-Mutations are specified using the `mutation` query param. The available values are:
-
-- `set-url` - Also requires `to` param.
-- `set-cookie` - Also requires `name` and `value` params. Uses NextResponse cookie utitility.
-- `set-header` - Also requires `name` and `value` params.
+API endpoints are configured to print the URL that the handler receives through the `request` parameter.
 
 # Results
 
-We use cURL to determine the behavior since browsers bloat requests with headers that are not helpful for debugging.
-
-We run the cURL requests against both development and production environment. The production environment is hosted on Vercel.
+We run cURL requests against both development and production to determine their behavior. The production environment is hosted on Vercel.
 
 ## Baseline
 
