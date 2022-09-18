@@ -82,11 +82,11 @@ Prod request.url: https://nextjs-middleware-debugging.vercel.app/api/edge?foo=ba
 
 With `NextResponse.next()`, all endpoints behave consistently, with one small exception.
 
-Edge API routes have access to the full URL, while others are missing the origin.
+Edge API routes return the full URL, while others are missing the origin.
 
 ## Test
 
-Instead of requesting the endpoint directly, we will access a different path (/test), and middleware will return `NextResponse.rewrite()` to forward the request to the appropriate endpoint.
+To test `NextResponse.rewrite()`, we will now request a different path (/test), and use middleware to rewrite the request to the appropriate endpoint.
 
 For completeness, we include a query string (?foo=bar) in the rewrite URL.
 
