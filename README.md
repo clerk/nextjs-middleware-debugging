@@ -23,191 +23,144 @@ API endpoints are configured to print the URL that the handler receives through 
 
 We run cURL requests against both development and production to determine their behavior. The production environment is hosted on Vercel.
 
-## Baseline
+## Control
 
-This prints the headers and URL received in each endpoint's Request object when middleware returns NextResponse.next()
+This prints the request URL when endpoints are accessed directly, and middleware returns `NextResponse.next()`.
 
-### /page/node
+For completeness, we include a query string (?foo=bar) in the URL.
 
-**Command**
+### Command
 
 ```
-echo "/page/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/page/node" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/node" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/page/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/page/edge" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/edge" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/api/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/api/node" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/node" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/api/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/api/edge" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/edge" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));'
+echo "Requesting: /page/node?foo=bar\n" \
+&& echo -n "Dev context.req.url:  " \
+&& curl -s "http://localhost:3000/page/node?foo=bar" | awk -F '---' '{ print $2 }' \
+&& echo -n "Prod context.req.url: " \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/node?foo=bar" | awk -F '---' '{ print $2 }' \
+&& echo "\n\nRequesting: /page/edge?foo=bar\n" \
+&& echo -n "Dev context.req.url:  " \
+&& curl -s "http://localhost:3000/page/edge?foo=bar" | awk -F '---' '{ print $2 }' \
+&& echo -n "Prod context.req.url: " \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/edge?foo=bar" | awk -F '---' '{ print $2 }' \
+&& echo "\n\nRequesting: /api/node?foo=bar\n" \
+&& echo -n "Dev request.url:  " \
+&& curl -s "http://localhost:3000/api/node?foo=bar" \
+&& echo -n "\nProd request.url: " \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/node?foo=bar" \
+&& echo "\n\nRequesting: /api/edge?foo=bar\n" \
+&& echo -n "Dev request.url:  " \
+&& curl -s "http://localhost:3000/api/edge?foo=bar" \
+&& echo -n "\nProd request.url: " \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/edge?foo=bar"
+```
+
+### Results
+
+```
+Requesting: /page/node?foo=bar
+
+Dev context.req.url:  /page/node?foo=bar
+Prod context.req.url: /page/node?foo=bar
+
+
+Requesting: /page/edge?foo=bar
+
+Dev context.req.url:  /page/edge?foo=bar
+Prod context.req.url: /page/edge?foo=bar
+
+
+Requesting: /api/node?foo=bar
+
+Dev request.url:  /api/node?foo=bar
+Prod request.url: /api/node?foo=bar
+
+Requesting: /api/edge?foo=bar
+
+Dev request.url:  http://localhost:3000/api/edge?foo=bar
+Prod request.url: https://nextjs-middleware-debugging.vercel.app/api/edge?foo=bar
+```
+
+With NextResponse.next() endpoints all behave consistently, with one small exception.
+
+Edge API routes have access to the full URL, while others are missing the origin.
+
+## Test
+
+Instead of requesting the endpoint directly, we will access a different path (/test), and middleware will return `NextResponse.rewrite()` to forward the request to the appropriate endpoint.
+
+For completeness, we include a query string (?foo=bar) in the rewrite URL.
+
+### Command
+
+```
+echo "Requesting: /test?rewrite=/page/node?foo=bar\n" \
+&& echo -n "Dev context.req.url:  " \
+&& curl -s "http://localhost:3000/test?rewrite=/page/node?foo=bar" | awk -F '---' '{ print $2 }' \
+&& echo -n "Prod context.req.url: " \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/test?rewrite=/page/node?foo=bar" | awk -F '---' '{ print $2 }' \
+&& echo "\n\nRequesting: /test?rewrite=/page/edge?foo=bar\n" \
+&& echo -n "Dev context.req.url:  " \
+&& curl -s "http://localhost:3000/test?rewrite=/page/edge?foo=bar" | awk -F '---' '{ print $2 }' \
+&& echo -n "Prod context.req.url: " \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/test?rewrite=/page/edge?foo=bar" | awk -F '---' '{ print $2 }' \
+&& echo "\n\nRequesting: /test?rewrite=/api/node?foo=bar\n" \
+&& echo -n "Dev request.url:  " \
+&& curl -s "http://localhost:3000/test?rewrite=/api/node?foo=bar" \
+&& echo -n "\nProd request.url: " \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/test?rewrite=/api/node?foo=bar" \
+&& echo "\n\nRequesting: /test?rewrite=/api/edge?foo=bar\n" \
+&& echo -n "Dev request.url:  " \
+&& curl -s "http://localhost:3000/test?rewrite=/api/edge?foo=bar" \
+&& echo -n "\nProd request.url: " \
+&& curl -s "https://nextjs-middleware-debugging.vercel.app/test?rewrite=/api/edge?foo=bar"
 ```
 
 **Results**
 
-Every endpoint behaves mostly consistently, with one exception.
-
-Edge API routes have a full URL in req.url while the others only have a pathname.
-
-## Set a new URL
-
-Every request here goes to /foo, but is then rewritten to an endpoint.
-
-We include a query param in the rewrite url (e.g. /api/node?bar=baz) because it illuminates some additional inconsistencies.
-
-**Command**
-
 ```
-echo "/page/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/foo?mutation=set-url&to=/page/node?bar=baz" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/foo?mutation=set-url&to=/page/node?bar=baz" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/page/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/foo?mutation=set-url&to=/page/edge?bar=baz" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/foo?mutation=set-url&to=/page/edge?bar=baz" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/api/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/foo?mutation=set-url&to=/api/node?bar=baz" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/foo?mutation=set-url&to=/api/node?bar=baz" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/api/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/foo?mutation=set-url&to=/api/edge?bar=baz" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/foo?mutation=set-url&to=/api/edge?bar=baz" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));'
-```
+Requesting: /test?rewrite=/page/node?foo=bar
 
-**Results**
+Dev context.req.url:  /test?rewrite=/page/node?foo=bar
+Prod context.req.url: /test?foo=bar
+
+
+Requesting: /test?rewrite=/page/edge?foo=bar
+
+Dev context.req.url:  /page/edge?foo=bar
+Prod context.req.url: /test?foo=bar
+
+
+Requesting: /test?rewrite=/api/node?foo=bar
+
+Dev request.url:  /test?rewrite=/api/node?foo=bar
+Prod request.url: /test?foo=bar
+
+Requesting: /test?rewrite=/api/edge?foo=bar
+
+Dev request.url:  http://localhost:3000/api/edge?foo=bar
+Prod request.url: https://nextjs-middleware-debugging.vercel.app/test?foo=bar
+```
 
 _/page/node_
 
-For dev, `context.req.url` reflects the complete original request URL: "/foo?mutation=set-url&to=/page/node?bar=baz"
+❌ In dev, `context.req.url` reflects the complete original request URL
 
-For prod, `context.req.url` reflects the original pathname and the rewritten query string: "/foo?bar=baz"
+✅ In prod, `context.req.url` reflects the original pathname and the rewritten query string
 
 _/page/edge_
 
-For dev, `context.req.url` reflects the complete rewritten request URL: "/page/edge?bar=baz"
+❌ In dev, `context.req.url` reflects the complete rewritten request URL
 
-From prod, `context.req.url` reflects the original pathname and the rewritten query string: "/foo?bar=baz"
+❌ In prod, `context.req.url` reflects the original pathname and the rewritten query string
 
 _/api/node_
 
-For dev, `request.url` reflects the complete original request URL: "/foo?mutation=set-url&to=/api/node?bar=baz"
+❌ In dev, `request.url` reflects the complete original request URL
 
-For prod, `request.url` reflects the original pathname and the rewritten query string: "/foo?bar=baz"
+❌ In prod, `request.url` reflects the original pathname and the rewritten query string
 
 _/api/edge_
 
-For dev, `request.url` reflects the complete rewritten request URL: "http://localhost:3000/api/edge?bar=baz"
+✅ In dev, `request.url` reflects the complete rewritten request URL
 
-From prod, `request.url` reflects the original pathname and the rewritten query string: "https://nextjs-middleware-debugging.vercel.app/foo?bar=baz"
-
-## Set a header
-
-This passes `headers` to the second argument of `NextResponse.rewrite()`. (ResponseInit)
-
-It is expected that this will set a response header, not a request header for the rewrite request.
-
-**Command to investigate response headers**
-
-```
-echo "/page/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -sI "http://localhost:3000/page/node?mutation=set-header&name=foo&value=bar" \
-&& echo "\n\nProd\n" \
-&& curl -sI "https://nextjs-middleware-debugging.vercel.app/page/node?mutation=set-header&name=foo&value=bar" \
-&& echo "\n\n\n/page/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -sI "http://localhost:3000/page/edge?mutation=set-header&name=foo&value=bar" \
-&& echo "\n\nProd\n" \
-&& curl -sI "https://nextjs-middleware-debugging.vercel.app/page/edge?mutation=set-header&name=foo&value=bar" \
-&& echo "\n\n\n/api/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -sI "http://localhost:3000/api/node?mutation=set-header&name=foo&value=bar" \
-&& echo "\n\nProd\n" \
-&& curl -sI "https://nextjs-middleware-debugging.vercel.app/api/node?mutation=set-header&name=foo&value=bar" \
-&& echo "\n\n\n/api/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -sI "http://localhost:3000/api/edge?mutation=set-header&name=foo&value=bar" \
-&& echo "\n\nProd\n" \
-&& curl -sI "https://nextjs-middleware-debugging.vercel.app/api/edge?mutation=set-header&name=foo&value=bar"
-```
-
-**Results**
-
-For dev and prod, the response header is always set as expected.
-
-**Command to investigate request headers for the rewrite**
-
-```
-echo "/page/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/page/node?mutation=set-header&name=foo&value=bar" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/node?mutation=set-header&name=foo&value=bar" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/page/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/page/edge?mutation=set-header&name=foo&value=bar" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/edge?mutation=set-header&name=foo&value=bar" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/api/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/api/node?mutation=set-header&name=foo&value=bar" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/node?mutation=set-header&name=foo&value=bar" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/api/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/api/edge?mutation=set-header&name=foo&value=bar" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/edge?mutation=set-header&name=foo&value=bar" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));'
-```
-
-**Results**
-
-For dev, all endpoints do not receive an additional request header as expected.
-
-For prod, edge endpoints do not receive an additional request header as expected.
-
-For prod, node endpoints unexpectedly receive an additional request header.
-
-## Set a cookie
-
-```
-echo "/page/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/page/node?mutation=set-cookie&name=foo&value=bar" -H "Cookie: bar=baz" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/node?mutation=set-cookie&name=foo&value=bar" -H "Cookie: bar=baz" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/page/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/page/edge?mutation=set-cookie&name=foo&value=bar" -H "Cookie: bar=baz" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/page/edge?mutation=set-cookie&name=foo&value=bar" -H "Cookie: bar=baz" | awk -F '---' '{ print $2 }' | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/api/node route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/api/node?mutation=set-cookie&name=foo&value=bar" -H "Cookie: bar=baz" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/node?mutation=set-cookie&name=foo&value=bar" -H "Cookie: bar=baz" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\n\n/api/edge route\n\n" \
-&& echo "Dev\n" \
-&& curl -s "http://localhost:3000/api/edge?mutation=set-cookie&name=foo&value=bar" -H "Cookie: bar=baz" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));' \
-&& echo "\n\nProd\n" \
-&& curl -s "https://nextjs-middleware-debugging.vercel.app/api/edge?mutation=set-cookie&name=foo&value=bar" -H "Cookie: bar=baz" | node -r fs -e 'console.log(JSON.stringify(JSON.parse(fs.readFileSync("/dev/stdin", "utf-8")), null, 2));'
-```
-
-❌✅
+❌ In prod, `request.url` reflects the original pathname and the rewritten query string
