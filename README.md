@@ -29,7 +29,7 @@ We ran cURL requests against both development and production to determine their 
 
 ## Control
 
-This prints the request URL when endpoints are accessed directly and middleware returns `NextResponse.next()`.
+To establish a baseline, we ran the test while accessing the endpoint URLs directly. In these tests, our middleware returns `NextResponse.next()`.
 
 For completeness, we include a query string (?foo=bar) in the URL.
 
@@ -51,7 +51,7 @@ echo "Requesting: /page/node?foo=bar\n" \
 && curl -s "http://localhost:3000/api/node?foo=bar" \
 && echo -n "\nProd request.url: " \
 && curl -s "https://nextjs-middleware-debugging.vercel.app/api/node?foo=bar" \
-&& echo "\n\nRequesting: /api/edge?foo=bar\n" \
+&& echo "\n\n\nRequesting: /api/edge?foo=bar\n" \
 && echo -n "Dev request.url:  " \
 && curl -s "http://localhost:3000/api/edge?foo=bar" \
 && echo -n "\nProd request.url: " \
@@ -78,6 +78,7 @@ Requesting: /api/node?foo=bar
 Dev request.url:  /api/node?foo=bar
 Prod request.url: /api/node?foo=bar
 
+
 Requesting: /api/edge?foo=bar
 
 Dev request.url:  http://localhost:3000/api/edge?foo=bar
@@ -90,7 +91,7 @@ Edge API routes return the full URL, while others are missing the origin.
 
 ## Test
 
-To test `NextResponse.rewrite()`, we will now request a different path (/test), and use middleware to rewrite the request to the appropriate endpoint.
+To test `NextResponse.rewrite()`, we request a different path (/test), and use middleware to rewrite the request to the appropriate endpoint.
 
 For completeness, we include a query string (?foo=bar) in the rewrite URL.
 
@@ -112,7 +113,7 @@ echo "Requesting: /test?rewrite=/page/node?foo=bar\n" \
 && curl -s "http://localhost:3000/test?rewrite=/api/node?foo=bar" \
 && echo -n "\nProd request.url: " \
 && curl -s "https://nextjs-middleware-debugging.vercel.app/test?rewrite=/api/node?foo=bar" \
-&& echo "\n\nRequesting: /test?rewrite=/api/edge?foo=bar\n" \
+&& echo "\n\n\nRequesting: /test?rewrite=/api/edge?foo=bar\n" \
 && echo -n "Dev request.url:  " \
 && curl -s "http://localhost:3000/test?rewrite=/api/edge?foo=bar" \
 && echo -n "\nProd request.url: " \
@@ -139,31 +140,36 @@ Requesting: /test?rewrite=/api/node?foo=bar
 Dev request.url:  /test?rewrite=/api/node?foo=bar
 Prod request.url: /test?foo=bar
 
+
 Requesting: /test?rewrite=/api/edge?foo=bar
 
 Dev request.url:  http://localhost:3000/api/edge?foo=bar
 Prod request.url: https://nextjs-middleware-debugging.vercel.app/test?foo=bar
 ```
 
-_/page/node_
+Though we expected every scenario to show the rewritten request URL, that was only the case in 2 of 8 scenarios.
+
+The results show inconsistency across both (edge vs node) and (dev vs prod) when a rewrite is applied.
+
+**/page/node**
 
 ❌ In dev, `context.req.url` reflects the complete original request URL
 
 ❌ In prod, `context.req.url` reflects the original pathname and the rewritten query string
 
-_/page/edge_
+**/page/edge**
 
 ✅ In dev, `context.req.url` reflects the complete rewritten request URL
 
 ❌ In prod, `context.req.url` reflects the original pathname and the rewritten query string
 
-_/api/node_
+**/api/node**
 
 ❌ In dev, `request.url` reflects the complete original request URL
 
 ❌ In prod, `request.url` reflects the original pathname and the rewritten query string
 
-_/api/edge_
+**/api/edge**
 
 ✅ In dev, `request.url` reflects the complete rewritten request URL
 
