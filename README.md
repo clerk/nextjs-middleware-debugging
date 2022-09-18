@@ -35,6 +35,8 @@ For completeness, we include a query string (?foo=bar) in the URL.
 
 ### Command
 
+Note: You must be running this repository on localhost:3000 before running the command
+
 ```
 echo "Requesting: /page/node?foo=bar\n" \
 && echo -n "Dev context.req.url:  " \
@@ -96,6 +98,8 @@ To test `NextResponse.rewrite()`, we request a different path (/test), and use m
 For completeness, we include a query string (?foo=bar) in the rewrite URL.
 
 ### Command
+
+Note: You must be running this repository on localhost:3000 before running the command
 
 ```
 echo "Requesting: /test?rewrite=/page/node?foo=bar\n" \
