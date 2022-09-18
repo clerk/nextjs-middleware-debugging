@@ -1,12 +1,16 @@
 # About
 
-This repo was built to help determine how calling NextResponse.rewrite() in Next.js impacts the Request object received at the final _endpoint_, which can be either a React Page or a API Route.
+This repo was built to help determine how calling `NextResponse.rewrite()` in Next.js middleware impacts the Request object that is received at the final _endpoint_, which can be either a React Page or a API Route.
+
+For API routes, we investigate the value inside `request.url`
+
+For React pages, we investigate the value inside `context.req.url`
 
 We found that there is inconsistency across development and production, and across node and edge runtimes. We detail those inconsistencies below and provide commands to reproduce.
 
 # Using this repo
 
-There are four "endpoints" in this repo:
+There are four "endpoints" inside this repo:
 
 1. /page/node
 2. /page/edge
@@ -15,9 +19,9 @@ There are four "endpoints" in this repo:
 
 The endpoints run on the runtime indicated in their path, using the Next.js [switchable runtime](https://nextjs.org/docs/advanced-features/react-18/switchable-runtime).
 
-Page endpoints are configured to print the URL that `getServerSideProps` receives inside `context.req`. The URL is wrapped in triple hyphens (e.g. ---) for easy parsing from the command line.
+Page endpoints print the request URL inside the HTML body. It wraps the value in triple hyphens (e.g. ---) for easy parsing from the command line.
 
-API endpoints are configured to print the URL that the handler receives through the `request` parameter.
+API endpoints print the request URL _as_ the body. There is no HTML body we need to parse through, so we only print the raw value.
 
 # Results
 
