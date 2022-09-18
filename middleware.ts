@@ -22,27 +22,6 @@ export default function middleware(req: NextRequest) {
 
   const newUrl = new URL(req.url);
 
-  if (action === "set-query-param") {
-    const name = query.get("name");
-    const value = query.get("value");
-    if (name && value) {
-      newUrl.searchParams.set(name, value);
-      return NextResponse.rewrite(newUrl);
-    } else {
-      throw new Error("must set name and value to set a query param");
-    }
-  }
-
-  if (action === "delete-query-param") {
-    const name = query.get("name");
-    if (name) {
-      newUrl.searchParams.delete(name);
-      return NextResponse.rewrite(newUrl);
-    } else {
-      throw new Error("must set name to delete a query param");
-    }
-  }
-
   if (action === "set-cookie") {
     const name = query.get("name");
     const value = query.get("value");
@@ -52,16 +31,6 @@ export default function middleware(req: NextRequest) {
       return NextResponse.rewrite(newUrl);
     } else {
       throw new Error("must set name and value to set a cookie");
-    }
-  }
-
-  if (action === "delete-cookie") {
-    const name = query.get("name");
-    if (name) {
-      newUrl.searchParams.delete(name);
-      return NextResponse.rewrite(newUrl);
-    } else {
-      throw new Error("must set name to delete a cookie");
     }
   }
 
