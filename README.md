@@ -4,7 +4,7 @@ This repo was built to help determine how calling NextResponse.rewrite() in Next
 
 We found that there is inconsistency across development and production, and across node and edge runtimes. We detail those inconsistencies below and provide commands to reproduce.
 
-# How to use
+# Using this repo
 
 There are four "endpoints" in this repo:
 
